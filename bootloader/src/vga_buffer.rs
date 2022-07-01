@@ -1,6 +1,6 @@
-use volatile::Volatile;
 use lazy_static::lazy_static;
 use spin::Mutex;
+use volatile::Volatile;
 
 use core::fmt;
 
@@ -81,7 +81,7 @@ struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
-/// Writer struct for the vga console. Handles the current cursor position and 
+/// Writer struct for the vga console. Handles the current cursor position and
 /// the emitted text
 pub struct Writer {
     column_position: usize,
@@ -151,7 +151,6 @@ impl Writer {
                 // not part of printable ASCII range
                 _ => self.write_byte(0xfe),
             }
-
         }
     }
 }

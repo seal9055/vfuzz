@@ -66,7 +66,7 @@ load_stage1:
     int 0x13
     jc read_error
     mov dl, [drive_id]
-    jmp 0x1000
+    jmp 0x7e00
 
 ; Setup registers for error message pertaining to disk extensions
 disk_extension_not_supported:
@@ -109,12 +109,12 @@ long_mode_err_len: equ $-long_mode_err_msg
 load_stage1_err_msg: db "Error reading stage1 bootloader from disk"
 load_stage1_err_len: equ $-load_stage1_err_msg
 
-; Initialize the structure passed to BIOS 0x13 to read 5 sectors to physical
+; Initialize the structure passed to BIOS 0x13 to read 2 sectors to physical
 ; address 0x1000
 load_stage1_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, dw        0x10
-    at disk_address_packet_type.num_sectors, dw 0x5
-    at disk_address_packet_type.offset, dw      0x1000
+    at disk_address_packet_type.num_sectors, dw 0x2
+    at disk_address_packet_type.offset, dw      0x7e00
     at disk_address_packet_type.segment, dw     0x0
     at disk_address_packet_type.address_lo, dd  0x1
     at disk_address_packet_type.address_hi, dd  0x0

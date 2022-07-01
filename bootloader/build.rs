@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 
 fn nasm(_in_asm: &str, out_obj: &str) {
     if Path::new(out_obj).exists() {
@@ -8,7 +8,8 @@ fn nasm(_in_asm: &str, out_obj: &str) {
 
     let status = Command::new("touch")
         .args(&[out_obj])
-        .status().expect("Failed to run test");
+        .status()
+        .expect("Failed to run test");
 
     //let status = Command::new("nasm")
     //    .args(&["-f", "win32", "-o", out_obj, in_asm])
@@ -18,7 +19,10 @@ fn nasm(_in_asm: &str, out_obj: &str) {
     assert!(status.success(), "NASM command failed");
 
     /* Ensure output file was created */
-    assert!(Path::new(out_obj).exists(), "NASM did not generate expected file");
+    assert!(
+        Path::new(out_obj).exists(),
+        "NASM did not generate expected file"
+    );
 }
 
 fn main() {

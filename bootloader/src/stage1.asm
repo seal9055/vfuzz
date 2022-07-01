@@ -1,5 +1,5 @@
 [bits 16]
-[org 0x1000]
+[org 0x7e00]
 
 ; Stage 1 bootloader. 512 * 5 bytes of space. 
 ; Loads the kernel, retrieves the memory map, enables the a0 line, enters 
@@ -29,9 +29,9 @@ enable_a20:
     or al, 2
     out 0x92, al
 
-; Load the kernel from disk into memory
+; Load the stage2 bootloader from disk to memory (rust portio of bootloader)
 load_kernel:
-    mov si, load_kernel_packet
+    mov si, load_stage2_packet
     mov dl, [drive_id]
     mov ah, 0x42
     int 0x13
@@ -169,6 +169,38 @@ lm_entry:
     mov byte[0xb8000], 'S'
     mov byte[0xb8001], 0xa
 
+; The rust portion of the bootloader was simply appended to stage1. This means
+; that it still needs to be written to the correct memory locations. It comes
+; alongside some metadata describing the amount of sections and each sections
+; vaddr/size
+load_stage2:
+	; Zero out entire range where the bootloader is loaded [0x100000, 0x200000)
+    ; Ram is not necessarily 0 initialized, so this makes sure that memory is
+    ; not already pre-initialized, which could cause issues
+	mov edi, 0x100000
+	mov ecx, 0x200000 - 0x100000
+	xor eax, eax
+	rep stosb
+
+    mov eax, [rust_entry]       ; Num_sections
+    lea edx, [rust_entry + 4]   ; Initialize edx to start of first struct
+
+.loop:
+    test eax, eax
+    jz short .end
+
+    mov edi, [edx]      ; Vaddr
+    mov ecx, [edx + 4]  ; Size
+    lea esi, [edx + 8]  ; Raw data
+    add edx, ecx        ; Increment pointer by size of current chunk
+    rep movsb           ; memcpy(edi, esi, ecx)
+
+    dec eax
+    jmp short .loop
+
+.end:
+    jmp 0x100000
+
 l_end:
     hlt
     jmp l_end
@@ -187,11 +219,11 @@ msg: db ""
 msglen: equ $-msg
 
 ; Initialize the structure passed to BIOS 0x13 to read the kernel from disk
-load_kernel_packet: istruc disk_address_packet_type
+load_stage2_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, dw        0x10
     at disk_address_packet_type.num_sectors, dw 100
-    at disk_address_packet_type.offset, dw      0x0
-    at disk_address_packet_type.segment, dw     0x1000
+    at disk_address_packet_type.offset, dw      0x8200
+    at disk_address_packet_type.segment, dw     0
     at disk_address_packet_type.address_lo, dd  0x6
     at disk_address_packet_type.address_hi, dd  0x0
 iend
@@ -206,7 +238,7 @@ gdt_base:
     dw 0xffff       ; limit 0:15
     dw 0x0000       ; base 0:15
     db 0x00         ; base 16:23
-    db 0x9a   ; access P=1, DPL=0, S=1, TYPE=1010 
+    db 0x9a         ; access P=1, DPL=0, S=1, TYPE=1010 
     db 0xcf         
     db 0x00         ; base 24:31
     ; Data
@@ -243,4 +275,10 @@ gdt64:
 
 ; ------------------------------------------------------------------------------
 
-times (512 * 105) - ($-$$) db 0
+times (512 * 2) - ($-$$) db 0
+
+; Load the stage2 bootloader onto disk. This part of the bootloader is written
+; in rust
+
+rust_entry:
+incbin "flattened_stage2.bin"
