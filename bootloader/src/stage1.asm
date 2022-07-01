@@ -12,7 +12,7 @@ struc disk_address_packet_type
     .num_sectors: resw 1 ; Number of 512 byte sectors
     .offset:      resw 1 ; Memory offset to read it into
     .segment:     resw 1 ; In memory page zero (used together with offset)
-    .address_lo:  resd 1 ; Have the lba read in this spot
+    .address_lo:  resd 1 ; Have the lba start reading in from this segment
     .address_hi:  resd 1 ; More storage bytes if required
 endstruc
 
@@ -85,8 +85,8 @@ load_gdt_idt:
 ; Setup registers for error message pertaining to reading in the kernel
 read_error:
     mov bx, 0xa
-    mov bp, load_kernel_err_msg
-    mov cx, load_kernel_err_len
+    mov bp, load_stage2_err_msg
+    mov cx, load_stage2_err_len
     jmp print_message
 
 ; Setup registers for error message pertaining to retrieving the memory layout
@@ -177,8 +177,8 @@ load_stage2:
 	; Zero out entire range where the bootloader is loaded [0x100000, 0x200000)
     ; Ram is not necessarily 0 initialized, so this makes sure that memory is
     ; not already pre-initialized, which could cause issues
-	mov edi, 0x100000
-	mov ecx, 0x200000 - 0x100000
+	mov edi, 0x10000
+	mov ecx, 0x20000 - 0x10000
 	xor eax, eax
 	rep stosb
 
@@ -193,25 +193,25 @@ load_stage2:
     mov ecx, [edx + 4]  ; Size
     lea esi, [edx + 8]  ; Raw data
     add edx, ecx        ; Increment pointer by size of current chunk
+    add edx, 8
     rep movsb           ; memcpy(edi, esi, ecx)
 
     dec eax
     jmp short .loop
 
 .end:
-    jmp 0x100000
+    jmp 0x10000
 
 l_end:
     hlt
     jmp l_end
 
-
 ; Structures
 ; ------------------------------------------------------------------------------
 
 drive_id: db 0
-load_kernel_err_msg: db "Error reading kernel from disk"
-load_kernel_err_len: equ $-load_kernel_err_msg
+load_stage2_err_msg: db "Error reading stage2 bootloader from disk"
+load_stage2_err_len: equ $-load_stage2_err_msg
 memory_layout_err_msg: db "Error retrieving memory layout information"
 memory_layout_err_len: equ $-memory_layout_err_msg
 
@@ -221,10 +221,10 @@ msglen: equ $-msg
 ; Initialize the structure passed to BIOS 0x13 to read the kernel from disk
 load_stage2_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, dw        0x10
-    at disk_address_packet_type.num_sectors, dw 100
+    at disk_address_packet_type.num_sectors, dw 25
     at disk_address_packet_type.offset, dw      0x8200
     at disk_address_packet_type.segment, dw     0
-    at disk_address_packet_type.address_lo, dd  0x6
+    at disk_address_packet_type.address_lo, dd  0x3
     at disk_address_packet_type.address_hi, dd  0x0
 iend
 
@@ -279,6 +279,5 @@ times (512 * 2) - ($-$$) db 0
 
 ; Load the stage2 bootloader onto disk. This part of the bootloader is written
 ; in rust
-
 rust_entry:
 incbin "flattened_stage2.bin"

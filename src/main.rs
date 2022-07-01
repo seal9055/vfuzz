@@ -11,8 +11,16 @@ fn flatten_bootloader(filename: &str) -> Vec<(usize, usize, Vec<u8>)> {
             continue;
         }
 
-        let raw_data = stage1[phdr.offset..phdr.offset + phdr.memsz]
+        println!("{:#X?}", phdr);
+
+        let mut raw_data = stage1[phdr.offset..phdr.offset + phdr.filesz]
             .to_vec().clone();
+
+        // Pad with nullbytes if the section has a smaller size on disk than
+        // in memory
+        let filler = vec![0; phdr.memsz - raw_data.len()];
+        raw_data.extend_from_slice(&filler);
+        assert_eq!(phdr.memsz, raw_data.len());
 
         assert_eq!(raw_data.len(), phdr.memsz, 
                    "Error reading in raw data for a program header");
@@ -38,7 +46,8 @@ fn main() {
         bytes.extend_from_slice(&raw);
     }
 
-    let filler = vec![0; (512 * 101) - bytes.len()];
+    assert!(bytes.len() < 512 * 25);
+    let filler = vec![0; (512 * 25) - bytes.len()];
     bytes.extend_from_slice(&filler);
 
     std::fs::write("flattened_stage2.bin", bytes)

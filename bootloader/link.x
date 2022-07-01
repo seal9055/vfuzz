@@ -2,7 +2,7 @@ ENTRY(entry);
 
 MEMORY
 {
-  FLAG : ORIGIN = 0x10000, LENGTH = 1024K
+  FLAT : ORIGIN = 0x10000, LENGTH = 1024K
 }
 
 
@@ -11,20 +11,20 @@ SECTIONS {
     .text : ALIGN(4096) {
         KEEP(*(.entry))
         *(.text .text.*)
-    } > FLAG
+    } > FLAT
 
     .rodata :
     {
         *(.rodata .rodata.*);
-    } > FLAG
+    } > FLAT
 
     .bss :
     {
         *(.bss .bss.*);
-    } > FLAG
+    } > FLAT
 
     .data :
     {
         *(.data .data.*);
-    } > FLAG
+    } > FLAT
 }
