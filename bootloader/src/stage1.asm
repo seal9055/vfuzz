@@ -74,7 +74,6 @@ enable_protected_mode:
 ; corresponding rgdt & ridt registers
 load_gdt_idt:
     lgdt [gdt]
-    lidt [idt]
 
     ; Jump to protected mode
     jmp 0x0008:pm_entry
@@ -125,56 +124,55 @@ pm_entry:
     mov esp, 0x7c00
 
     ; Setup page tables 
-    cld
-    mov edi, 0x80000
-    xor eax, eax
-    mov ecx, 0x10000 / 4
-    rep stosd
+    ; cld
+    ; mov edi, 0x80000
+    ; xor eax, eax
+    ; mov ecx, 0x10000 / 4
+    ; rep stosd
 
-    mov dword[0x80000], 0x81007
-    mov dword[0x81000], 0b10000111
+    ; mov dword[0x80000], 0x81007
+    ; mov dword[0x81000], 0b10000111
 
     ; Load 64-bit gdt
-    lgdt [gdt64]
+    ; lgdt [gdt64]
 
     ; Enable 64-bit mode. This requires setting cr4:5, and loading the 
     ; previously setup paging structure into cr3
-    mov eax, cr4
-    or eax, (1 << 5)
-    mov cr4, eax
-
-    mov eax, 0x80000
-    mov cr3, eax
+    ; mov eax, cr4
+    ; or eax, (1 << 5)
+    ; mov cr4, eax
+    ; mov eax, 0x80000
+    ; mov cr3, eax
 
     ; Enable longmode
-    mov ecx, 0xc0000080
-    rdmsr
-    or eax, (1 << 8)
-    wrmsr
+    ; mov ecx, 0xc0000080
+    ; rdmsr
+    ; or eax, (1 << 8)
+    ; wrmsr
 
     ; Enable Paging
-    mov eax, cr0
-    or eax, (1 << 31)
-    mov cr0, eax
+    ; mov eax, cr0
+    ; or eax, (1 << 31)
+    ; mov cr0, eax
 
     ; Jump to longmode entry
-    jmp 8:lm_entry
+    ; jmp 8:lm_entry
 
-[bits 64]
+; [bits 64]
 
 ; Entry when first transitioning to 64-bit long mode
-lm_entry:
-    mov rsp, 0x7c00
-
-    mov byte[0xb8000], 'S'
-    mov byte[0xb8001], 0xa
+; lm_entry:
+;     mov rsp, 0x7c00
+; 
+;     mov byte[0xb8000], 'S'
+;     mov byte[0xb8001], 0xa
 
 ; The rust portion of the bootloader was simply appended to stage1. This means
 ; that it still needs to be written to the correct memory locations. It comes
 ; alongside some metadata describing the amount of sections and each sections
 ; vaddr/size
 load_stage2:
-	; Zero out entire range where the bootloader is loaded [0x100000, 0x200000)
+	; Zero out entire range where the bootloader is loaded [0x10000, 0x20000)
     ; Ram is not necessarily 0 initialized, so this makes sure that memory is
     ; not already pre-initialized, which could cause issues
 	mov edi, 0x10000
@@ -200,7 +198,7 @@ load_stage2:
     jmp short .loop
 
 .end:
-    mov rsp, 0x7000
+    push 905
     call 0x10000
 
 l_end:
@@ -269,6 +267,7 @@ gdt64_base:
     db 0x98         ; access P=1, DPL=0, S=1, TYPE=1010 
     db 0x20         
     db 0x00         ; base 24:31
+    dq 0x0000920000000000 ; Present, data r/w
 
 gdt64: 
 	dw (gdt64 - gdt64_base) - 1

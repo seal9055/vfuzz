@@ -11,8 +11,6 @@ fn flatten_bootloader(filename: &str) -> Vec<(usize, usize, Vec<u8>)> {
             continue;
         }
 
-        println!("{:#X?}", phdr);
-
         let mut raw_data = stage1[phdr.offset..phdr.offset + phdr.filesz]
             .to_vec().clone();
 
@@ -36,6 +34,8 @@ fn main() {
 
     let mut bytes: Vec<u8> = Vec::new();
 
+    assert!(sections.len() != 0, "No sections found in parsed binary");
+
     // Write the number of loadable sections to the file
     let num_sections = (sections.len() as u32).to_le_bytes();
     bytes.extend_from_slice(&num_sections);
@@ -46,7 +46,7 @@ fn main() {
         bytes.extend_from_slice(&raw);
     }
 
-    assert!(bytes.len() < 512 * 25);
+    assert!(bytes.len() < 512 * 25, "stage2 bootloader too large");
     let filler = vec![0; (512 * 25) - bytes.len()];
     bytes.extend_from_slice(&filler);
 

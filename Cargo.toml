@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-elfparser = { path = "../local_crates/elfparser" }
-# elfparser = { git = "https://github.com/seal9055/local_crates/", branch = "main" }
+#elfparser = { path = "../local_crates/elfparser" }
+elfparser = { git = "https://github.com/seal9055/local_crates/", branch = "main" }
+

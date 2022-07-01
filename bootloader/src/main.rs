@@ -4,12 +4,38 @@
 use bootloader::println;
 use core::panic::PanicInfo;
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+const X: usize = 5;
+
 #[no_mangle]
 /// Entry-point of the stage2 bootloader
-pub extern "C" fn entry(arg1: u64) -> ! {
-    let x = 3;
-    println!("Entered rust part of bootloader");
-    println!("Entered rust part of bootloader: {}", arg1);
+pub extern "C" fn entry(arg1: u32) -> ! {
+    println!("Entered rust part of bootloader: {} : {}", arg1, X);
+
+    static CORE_IDS: AtomicUsize = AtomicUsize::new(0);
+
+    let core_id = CORE_IDS.fetch_add(1, Ordering::SeqCst);
+
+    // If this is the first core booting up
+    if core_id == 0 {
+
+        // Initialize memory
+
+        // Download kernel
+
+        // Setup page tables
+
+        // Load the kernel
+
+        // for each core {
+            // allocate stack
+            // 
+
+    }
+
+    // launch kernel[core_id]
+
     hlt_loop();
 }
 
