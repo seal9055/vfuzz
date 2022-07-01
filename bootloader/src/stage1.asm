@@ -200,7 +200,8 @@ load_stage2:
     jmp short .loop
 
 .end:
-    jmp 0x10000
+    mov rsp, 0x7000
+    call 0x10000
 
 l_end:
     hlt

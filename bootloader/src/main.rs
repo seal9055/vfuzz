@@ -6,12 +6,10 @@ use core::panic::PanicInfo;
 
 #[no_mangle]
 /// Entry-point of the stage2 bootloader
-pub extern "C" fn entry() -> ! {
-    // Next steps:
-    // Figure out how to load the stage2 elf binary onto disk
-    // Figure out how to call into the rust code
-
+pub extern "C" fn entry(arg1: u64) -> ! {
+    let x = 3;
     println!("Entered rust part of bootloader");
+    println!("Entered rust part of bootloader: {}", arg1);
     hlt_loop();
 }
 
