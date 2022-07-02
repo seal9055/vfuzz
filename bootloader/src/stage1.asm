@@ -16,6 +16,12 @@ struc disk_address_packet_type
     .address_hi:  resd 1 ; More storage bytes if required
 endstruc
 
+;struc E820Entry
+;    .base:      resq 1
+;    .length:    resq 1
+;    .type:      resd 1
+;endstruc
+
 ; Entrypoint of stage1 bootloader
 start:
     ; Save disk id
@@ -37,29 +43,35 @@ load_kernel:
     int 0x13
     jc read_error
 
-; Retrieve the memory layout to determine what space we are free to use. Most of
-; the below parameters are magic values
+; Retrieve the memory layout to determine what space we are free to use. This structure is then
+; pushed onto the stack before jumping into rust code, so the rust portion of the bootloader can
+; make use of this information to setup the initial memory manager
+;
+; https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820
 retrieve_memory_layout:
+    mov dword[E820Entries], 0        ; Initialize size field to 0
+
     mov eax, 0xe820
-    mov edx, 0x534d4150
-    mov ecx, 20
-    mov edi, 0x9000
     xor ebx, ebx
+    mov ecx, 20
+    mov edx, 0x534d4150
+    mov edi, E820Entries+8
     int 0x15
     jc mem_layout_err
 
 ; This will loop until all memory has been mapped out, at which point 
 ; `get_mem_completed` is called
 get_mem_info:
-    add edi, 20
-    add eax, 0xe820
-    mov edx, 0x534d4150
-    mov ecx, 20
-    int 0x15
-    jc get_mem_completed
-
+    inc dword[E820Entries]
     test ebx, ebx
-    jnz get_mem_info
+    jz get_mem_completed
+
+    mov eax, 0xe820
+    mov ecx, 20
+    mov edx, 0x534d4150
+    add edi, 20
+    int 0x15
+    jnc get_mem_info
 
 ; Retrieving memory layout successfuly completed
 get_mem_completed:
@@ -198,7 +210,7 @@ load_stage2:
     jmp short .loop
 
 .end:
-    push 905
+    push E820Entries
     call 0x10000
 
 l_end:
@@ -220,12 +232,14 @@ msglen: equ $-msg
 ; Initialize the structure passed to BIOS 0x13 to read the kernel from disk
 load_stage2_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, dw        0x10
-    at disk_address_packet_type.num_sectors, dw 25
-    at disk_address_packet_type.offset, dw      0x8200
+    at disk_address_packet_type.num_sectors, dw 50
+    at disk_address_packet_type.offset, dw      0x8600
     at disk_address_packet_type.segment, dw     0
-    at disk_address_packet_type.address_lo, dd  0x3
+    at disk_address_packet_type.address_lo, dd  0x5
     at disk_address_packet_type.address_hi, dd  0x0
 iend
+
+E820Entries times (20 * 33) db 0
 
 ; 32-bit protected mode gdt
 ; ------------------------------------------------------------------------------
@@ -275,7 +289,7 @@ gdt64:
 
 ; ------------------------------------------------------------------------------
 
-times (512 * 2) - ($-$$) db 0
+times (512 * 4) - ($-$$) db 0
 
 ; Load the stage2 bootloader onto disk. This part of the bootloader is written
 ; in rust

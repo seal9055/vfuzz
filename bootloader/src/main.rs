@@ -2,16 +2,28 @@
 #![no_main]
 
 use bootloader::println;
+use bootloader::mm;
 use core::panic::PanicInfo;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-const X: usize = 5;
+#[repr(packed, C)]
+pub struct MemLayout {
+    num_entries: u64,
+    mem_layout: [mm::E820Entry; 32],
+}
 
 #[no_mangle]
 /// Entry-point of the stage2 bootloader
-pub extern "C" fn entry(arg1: u32) -> ! {
-    println!("Entered rust part of bootloader: {} : {}", arg1, X);
+pub extern "C" fn entry(arg1: &MemLayout) -> ! {
+    println!("Entered rust part of bootloader");
+    assert!(arg1.num_entries < 32, "Too many memory regions found");
+
+    for i in 0..arg1.num_entries {
+        let i = i as usize;
+        println!("[{:#0X}:{:#0X}] - {}", arg1.mem_layout[i].base, 
+                 arg1.mem_layout[i].base + arg1.mem_layout[i].length, arg1.mem_layout[i].typ); 
+    }
 
     static CORE_IDS: AtomicUsize = AtomicUsize::new(0);
 
@@ -21,6 +33,7 @@ pub extern "C" fn entry(arg1: u32) -> ! {
     if core_id == 0 {
 
         // Initialize memory
+            // Load memory map
 
         // Download kernel
 
