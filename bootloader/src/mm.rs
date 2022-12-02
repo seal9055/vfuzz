@@ -13,7 +13,8 @@ pub struct MMU {
 }
 
 impl MMU {
-    pub fn init(addr: usize) -> MMU {
+    pub fn init(_addr: usize) -> Option<MMU> {
+        /*
         let count: i32 = unsafe { *(addr as *const i32) };
         let mut _total_mem: u64 = 0;
         let mem_map: &[E820Entry] = unsafe { &*((addr+8) as *mut [E820Entry; 50]) };
@@ -34,5 +35,7 @@ impl MMU {
             }
         }
         mmu
+        */
+        None
     }
 }
