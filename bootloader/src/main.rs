@@ -1,10 +1,11 @@
 #![no_std]
 #![no_main]
 
-use bootloader::println;
-use bootloader::mm;
-use core::panic::PanicInfo;
+use bootloader::{
+    println, mm, acpi,
+};
 
+use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 #[repr(packed, C)]
@@ -21,13 +22,15 @@ pub extern "C" fn entry(arg1: &MemLayout) -> ! {
 
     for i in 0..arg1.num_entries {
         let i = i as usize;
-        println!("[{:#0X}:{:#0X}] - {}", arg1.mem_layout[i].base, 
-                 arg1.mem_layout[i].base + arg1.mem_layout[i].length, arg1.mem_layout[i].typ); 
+        println!("[{:0>16X}:{:0>16X}] - {}", {arg1.mem_layout[i].base}, 
+                 arg1.mem_layout[i].base + arg1.mem_layout[i].length, {arg1.mem_layout[i].typ}); 
     }
 
     static CORE_IDS: AtomicUsize = AtomicUsize::new(0);
 
     let core_id = CORE_IDS.fetch_add(1, Ordering::SeqCst);
+
+    acpi::init();
 
     // If this is the first core booting up
     if core_id == 0 {
@@ -48,6 +51,8 @@ pub extern "C" fn entry(arg1: &MemLayout) -> ! {
     }
 
     // launch kernel[core_id]
+
+    println!("Done with stage2");
 
     hlt_loop();
 }

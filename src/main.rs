@@ -46,8 +46,8 @@ fn main() {
         bytes.extend_from_slice(&raw);
     }
 
-    assert!(bytes.len() < 512 * 50, "stage2 bootloader too large");
-    let filler = vec![0; (512 * 50) - bytes.len()];
+    assert!(bytes.len() < 512 * 25, "stage2 bootloader too large");
+    let filler = vec![0; (512 * 25) - bytes.len()];
     bytes.extend_from_slice(&filler);
 
     std::fs::write("flattened_stage2.bin", bytes)

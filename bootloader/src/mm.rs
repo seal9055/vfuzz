@@ -1,5 +1,10 @@
-#[repr(C)]
+#[repr(packed, C)]
 #[derive(Debug, Default, Copy, Clone)]
+/// Memory mappings detected by BIOS 0x15 function
+/// https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820
+/// Region-Type:
+///     1: Usable
+///     2: Reserved
 pub struct E820Entry {
     pub base: u64,
     pub length:  u64,

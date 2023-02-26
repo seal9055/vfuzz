@@ -11,10 +11,6 @@ fn nasm(_in_asm: &str, out_obj: &str) {
         .status()
         .expect("Failed to run test");
 
-    //let status = Command::new("nasm")
-    //    .args(&["-f", "win32", "-o", out_obj, in_asm])
-    //    .status().expect("Failed to run nasm");
-
     /* Check for command success */
     assert!(status.success(), "NASM command failed");
 
