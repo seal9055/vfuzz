@@ -8,11 +8,12 @@
 ; Contains information such as the offset and size of the stage2 bootloader
 ; that is used when loading it from disk
 struc disk_address_packet_type
-    .size:        resw 1 ; Size
+    .size:        resb 1 ; Size
+    .zero:        resb 1 ; Always zero
     .num_sectors: resw 1 ; Number of 512 byte sectors
-    .offset:      resw 1 ; Memory offset to read it into
+    .offset:      resw 1 ; Memory address that this data is being read into
     .segment:     resw 1 ; In memory page zero (used together with offset)
-    .address_lo:  resd 1 ; Have the lba start reading in from this segment
+    .address_lo:  resd 1 ; This is the block on disk that data is being read from 
     .address_hi:  resd 1 ; More storage bytes if required
 endstruc
 
@@ -220,11 +221,12 @@ memory_layout_err_len: equ $-memory_layout_err_msg
 
 ; Initialize the structure passed to BIOS 0x13 to read stage2 from disk
 load_stage2_packet: istruc disk_address_packet_type
-    at disk_address_packet_type.size, dw        0x10
-    at disk_address_packet_type.num_sectors, dw 25
-    at disk_address_packet_type.offset, dw      0x8200
+    at disk_address_packet_type.size, db        0x10
+    at disk_address_packet_type.zero, db        0
+    at disk_address_packet_type.num_sectors, dw 50
+    at disk_address_packet_type.offset, dw      0x8600
     at disk_address_packet_type.segment, dw     0
-    at disk_address_packet_type.address_lo, dd  0x3
+    at disk_address_packet_type.address_lo, dd  0x5
     at disk_address_packet_type.address_hi, dd  0x0
 iend
 
@@ -278,7 +280,8 @@ gdt64:
 
 ; ------------------------------------------------------------------------------
 
-times (512 * 4) - ($-$$) db 0
+; 5 because we need to include the size of stage0 (512 bytes) in this
+times (512 * 5)-($-$$) db 0
 
 ; Load the stage2 bootloader onto disk. This part of the bootloader is written in rust
 rust_entry:

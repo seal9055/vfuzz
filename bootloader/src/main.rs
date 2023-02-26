@@ -30,7 +30,7 @@ pub extern "C" fn entry(arg1: &MemLayout) -> ! {
 
     let core_id = CORE_IDS.fetch_add(1, Ordering::SeqCst);
 
-    acpi::init();
+    unsafe { acpi::init(); }
 
     // If this is the first core booting up
     if core_id == 0 {

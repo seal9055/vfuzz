@@ -1,4 +1,6 @@
-use crate::println;
+use crate::{
+    println, read_phys,
+};
 
 /// Main system description tabel. Extended version of RSDT
 /// If the XSDT is valid, it must be used instead of the RSDT
@@ -17,6 +19,9 @@ struct Xsdt {
     creator_revision: u32,
 }
 
+/// Root System Description Pointer
+/// This table is used to locate the XSDT
+/// https://wiki.osdev.org/RSDP
 #[repr(C, packed)]
 struct Rsdp {
     signature:         [u8; 8],
@@ -30,7 +35,28 @@ struct Rsdp {
     reserved:          [u8; 3],
 }
 
-pub fn init() {
+pub unsafe fn init() {
     println!("ACPI init hit");
 
+    let ebda: u64 = read_phys::<u16>(0x40e) as u64;
+    assert_eq!(ebda % 0x10, 0, "ebda not aligned on 0x10 boundary");
+    
+    // The rsdp is located either in the first KiB of ebda or in the hardcoded address-range
+    let rsdp_possible_ranges = [
+        (ebda, ebda + 1024),
+        (0x000E0000, 0x000FFFFF),
+    ];
+
+    for range in rsdp_possible_ranges {
+        let start = range.0;
+        let end   = range.1;
+
+        for addr in (start..end).step_by(0x10) {
+            let rsdp = read_phys::<Rsdp>(addr);
+            if &rsdp.signature == b"RSD PTR " {
+                println!("FOUND: {}", rsdp.revision);
+                continue;
+            }
+        }
+    }
 }

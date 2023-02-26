@@ -7,11 +7,12 @@
 ; Contains information such as the offset and size of the stage1 bootloader
 ; that is used when loading it from disk
 struc disk_address_packet_type
-    .size:        resw 1 ; Size
+    .size:        resb 1 ; Size
+    .zero:        resb 1 ; Always zero
     .num_sectors: resw 1 ; Number of 512 byte sectors
-    .offset:      resw 1 ; Memory offset to read it into
+    .offset:      resw 1 ; Memory address that this data is being read into
     .segment:     resw 1 ; In memory page zero (used together with offset)
-    .address_lo:  resd 1 ; Start reading from disk using this sector
+    .address_lo:  resd 1 ; This is the block on disk that data is being read from 
     .address_hi:  resd 1 ; More storage bytes if required
 endstruc
 
@@ -112,8 +113,9 @@ load_stage1_err_len: equ $-load_stage1_err_msg
 ; Initialize the structure passed to BIOS 0x13 to read 2 sectors to physical
 ; address 0x1000
 load_stage1_packet: istruc disk_address_packet_type
-    at disk_address_packet_type.size, dw        0x10
-    at disk_address_packet_type.num_sectors, dw 0x2
+    at disk_address_packet_type.size, db        0x10
+    at disk_address_packet_type.zero, db        0x0
+    at disk_address_packet_type.num_sectors, dw 0x4
     at disk_address_packet_type.offset, dw      0x7e00
     at disk_address_packet_type.segment, dw     0x0
     at disk_address_packet_type.address_lo, dd  0x1
