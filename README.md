@@ -12,8 +12,8 @@ Currently only have the beginnings of the bootloader
 0x00000400 : 0x000004FF - BIOS data Area     [256]
 0x00007C00 : 0x00007DFF - Stage-0 Bootloader [512]
 0x00007E00 : 0x000085FF - Stage-1 Bootloader [512 * 4]
-0x00010000 : 0x00016400 - Stage-2 Bootloader [512 * 50]
-0x00080000 : 0x0009FFFF - ExtBIOS Data Area  [1024 * 128]
+0x00010000 : 0x00017800 - Stage-2 Bootloader [512 * 60]
+0x00080000 : 0x0009FFFF - ExtBIOS Data Area? [1024 * 128]
 0x01000000 :    ...     - Kernel             [...]
 ```
 

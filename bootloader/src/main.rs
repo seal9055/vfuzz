@@ -30,7 +30,14 @@ pub extern "C" fn entry(arg1: &MemLayout) -> ! {
 
     let core_id = CORE_IDS.fetch_add(1, Ordering::SeqCst);
 
-    unsafe { acpi::init(); }
+    // For some reason unwrapping here causes a segfault. Matching like this works though
+    let acpi = unsafe { acpi::ParsedACPI::parse() };
+    let acpi = match acpi {
+        Ok(v) => v,
+        Err(v) => panic!("{:?}", v),
+    };
+
+    println!("Done parsing acpi({}), found {} cores", acpi.version, acpi.num_apics);
 
     // If this is the first core booting up
     if core_id == 0 {
@@ -47,7 +54,6 @@ pub extern "C" fn entry(arg1: &MemLayout) -> ! {
         // for each core {
             // allocate stack
             // 
-
     }
 
     // launch kernel[core_id]
@@ -65,7 +71,8 @@ pub fn hlt_loop() -> ! {
 
 #[panic_handler]
 /// Panic handler
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", *info);
     hlt_loop();
 }
 

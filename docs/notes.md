@@ -14,8 +14,7 @@
 
 ### TODO
 - ACPI
-    - https://wiki.osdev.org/Symmetric_Multiprocessing
-    - Find MADT table in the XSDT table to get a list of cores
+    - Disable pic, find BSP and set local APIC
     - Startup Sequence: send combination of init IPI and SIPI's for every core
     - Have cores call initialization routines for rm -> pm -> lm
     - Each core needs to start the next core otherwise this becomes slow on many-core systems

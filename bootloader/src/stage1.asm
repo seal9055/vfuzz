@@ -223,7 +223,7 @@ memory_layout_err_len: equ $-memory_layout_err_msg
 load_stage2_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, db        0x10
     at disk_address_packet_type.zero, db        0
-    at disk_address_packet_type.num_sectors, dw 50
+    at disk_address_packet_type.num_sectors, dw 60
     at disk_address_packet_type.offset, dw      0x8600
     at disk_address_packet_type.segment, dw     0
     at disk_address_packet_type.address_lo, dd  0x5
