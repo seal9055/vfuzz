@@ -1,24 +1,17 @@
 [bits 16]
-[org 0x7e00]
+[org 0x8000]
 
 ; Stage 1 bootloader. 512 * 4 bytes of space. 
 ; Loads the stage2 bootloader (rust part), retrieves the memory map, enables the a0 line and
 ; enters protected & long mode
 
-; Contains information such as the offset and size of the stage2 bootloader
-; that is used when loading it from disk
-struc disk_address_packet_type
-    .size:        resb 1 ; Size
-    .zero:        resb 1 ; Always zero
-    .num_sectors: resw 1 ; Number of 512 byte sectors
-    .offset:      resw 1 ; Memory address that this data is being read into
-    .segment:     resw 1 ; In memory page zero (used together with offset)
-    .address_lo:  resd 1 ; This is the block on disk that data is being read from 
-    .address_hi:  resd 1 ; More storage bytes if required
-endstruc
-
 ; Entrypoint of stage1 bootloader
 start:
+    ; If this is an AP instead of the BSP, skip some init/loading routines
+    mov al, [is_ap]
+    cmp al, 0x1
+    je ap_entry
+
     ; Save disk id
     mov [drive_id], dl
 
@@ -203,28 +196,74 @@ run_stage2:
     jmp short .loop
 
 .end:
+    mov al, 0x1
+    mov [is_ap], al
+
+    ; Reenable Interrupts?
+    sti
+    ; Setup arguments to Stage-2 Bootloader
     mov rdi, E820Entries
+
+    ; Call Stage-2 entry function
     call 0x10000
 
 l_end:
     hlt
     jmp l_end
 
+[bits 16]
+ap_entry:
+    mov eax, cr0
+    or al, 1
+    mov cr0, eax
+
+    lgdt [gdt]
+    lidt [idt]
+
+    jmp 0x0008:ap_pm_entry
+
+[bits 32]
+ap_pm_entry:
+    mov byte[0xb8000], 'H'
+    mov byte[0xb8001], 0xa
+    mov byte[0xb8002], 'e'
+    mov byte[0xb8003], 0xa
+    mov byte[0xb8004], 'l'
+    mov byte[0xb8005], 0xa
+    mov byte[0xb8006], 'l'
+    mov byte[0xb8007], 0xa
+    mov byte[0xb8008], 'o'
+    mov byte[0xb8009], 0xa
+    hlt
+
 ; Structures
 ; ------------------------------------------------------------------------------
 
+is_ap: db 0
 drive_id: db 0
 load_stage2_err_msg: db "Error reading stage2 bootloader from disk"
 load_stage2_err_len: equ $-load_stage2_err_msg
 memory_layout_err_msg: db "Error retrieving memory layout information"
 memory_layout_err_len: equ $-memory_layout_err_msg
 
+; Contains information such as the offset and size of the stage2 bootloader
+; that is used when loading it from disk
+struc disk_address_packet_type
+    .size:        resb 1 ; Size
+    .zero:        resb 1 ; Always zero
+    .num_sectors: resw 1 ; Number of 512 byte sectors
+    .offset:      resw 1 ; Memory address that this data is being read into
+    .segment:     resw 1 ; In memory page zero (used together with offset)
+    .address_lo:  resd 1 ; This is the block on disk that data is being read from 
+    .address_hi:  resd 1 ; More storage bytes if required
+endstruc
+
 ; Initialize the structure passed to BIOS 0x13 to read stage2 from disk
 load_stage2_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, db        0x10
     at disk_address_packet_type.zero, db        0
     at disk_address_packet_type.num_sectors, dw 60
-    at disk_address_packet_type.offset, dw      0x8600
+    at disk_address_packet_type.offset, dw      0x8800
     at disk_address_packet_type.segment, dw     0
     at disk_address_packet_type.address_lo, dd  0x5
     at disk_address_packet_type.address_hi, dd  0x0

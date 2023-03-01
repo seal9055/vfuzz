@@ -11,7 +11,7 @@ Currently only have the beginnings of the bootloader
 0x00000000 : 0x000003FF - Real Mode IVT      [1024]
 0x00000400 : 0x000004FF - BIOS data Area     [256]
 0x00007C00 : 0x00007DFF - Stage-0 Bootloader [512]
-0x00007E00 : 0x000085FF - Stage-1 Bootloader [512 * 4]
+0x00008000 : 0x000087FF - Stage-1 Bootloader [512 * 4]
 0x00010000 : 0x00017800 - Stage-2 Bootloader [512 * 60]
 0x00080000 : 0x0009FFFF - ExtBIOS Data Area? [1024 * 128]
 0x01000000 :    ...     - Kernel             [...]
@@ -29,7 +29,8 @@ Its responsibilities include:
 
 #### Stage-1 Bootloader
 Now that we transferred out of the initial 512 bytes we have a little more space to work with. This
-portion of the bootloader is provided with 512 * 4 bytes of memory and loaded at 0x7e00. 
+portion of the bootloader is provided with 512 * 4 bytes of memory and loaded at 0x8000. This point
+is chosen because it is the ap-entry-point.
 
 Its responsibilities include:
 - Enable a20 line to address >1MiB of memory

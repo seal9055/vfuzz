@@ -67,7 +67,7 @@ load_stage1:
     int 0x13
     jc read_error
     mov dl, [drive_id]
-    jmp 0x7e00
+    jmp 0x8000
 
 ; Setup registers for error message pertaining to disk extensions
 disk_extension_not_supported:
@@ -116,7 +116,7 @@ load_stage1_packet: istruc disk_address_packet_type
     at disk_address_packet_type.size, db        0x10
     at disk_address_packet_type.zero, db        0x0
     at disk_address_packet_type.num_sectors, dw 0x4
-    at disk_address_packet_type.offset, dw      0x7e00
+    at disk_address_packet_type.offset, dw      0x8000
     at disk_address_packet_type.segment, dw     0x0
     at disk_address_packet_type.address_lo, dd  0x1
     at disk_address_packet_type.address_hi, dd  0x0

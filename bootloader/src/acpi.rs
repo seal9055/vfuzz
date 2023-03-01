@@ -1,10 +1,31 @@
-use crate::read_phys;
+//! ACPI - Advanced Configuration and Power Interface
+//!     - This can be used for general power management and to manage peripherals
+
+use crate::{read_phys, println, apic::get_apic_base};
 
 use core::mem::size_of;
 use either::Either;
 
+use x86::{
+    apic::{
+        xapic,
+        ApicControl,
+        ApicId::XApic,
+    }
+};
+
 /// Maximum number of cores we currently support getting up and running
-const MAX_CORES: usize = 16;
+pub const MAX_CORES: usize = 16;
+
+/// List of apics found on the system
+pub static mut APICS: [u32; MAX_CORES] = [0u32; MAX_CORES];
+
+/// Number of apics found and stored in `apics`
+pub static mut NUM_APICS: usize = 0;
+
+/// APICs are launched sequentially from each booting processor. This global is used to keep track 
+/// which APs we have already started
+pub static mut CUR_APIC: usize = 0;
 
 pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Debug)]
@@ -122,12 +143,8 @@ pub struct ParsedACPI {
     /// Some rsdt configuration options needed for further parsing
     rsdt_config: RsdtConfig,
 
-    /// Number of apics found and stored in `apics`
-    pub num_apics: usize,
-
-    /// List of apics found on the system
-    pub apics: [u32; MAX_CORES],
 }
+
 
 impl ParsedACPI {
     /// Default acpi
@@ -136,8 +153,6 @@ impl ParsedACPI {
             version: 0,
             rsdp: either::Left(Rsdp::default()),
             rsdt_config: RsdtConfig::default(),
-            apics: [0u32; MAX_CORES],
-            num_apics: 0,
         }
     }
 
@@ -288,7 +303,7 @@ impl ParsedACPI {
 
     /// Parse out the MADT table located at `start_addr` - `end_addr`
     unsafe fn parse_madt(&mut self, start_addr: u64, end_addr: u64) -> Result<()> {
-        let _local_apic_addr = read_phys::<u32>(start_addr);
+        let local_apic_base = read_phys::<u32>(start_addr);
         let _flags           = read_phys::<u32>(start_addr + 4);
 
         let mut records_ptr = start_addr + 8;
@@ -321,11 +336,11 @@ impl ParsedACPI {
 
                     // If the processor is enabled/can be enabled, record it
                     if (flags & PROCESSOR_ENABLED) != 0 || (flags & ONLINE_CAPABLE) != 0 {
-                        if self.num_apics >= MAX_CORES {
+                        if NUM_APICS >= MAX_CORES {
                             return Err(Error::TooManyCores);
                         }
-                        self.apics[self.num_apics] = apic_id as u32;
-                        self.num_apics += 1;
+                        APICS[NUM_APICS] = apic_id as u32;
+                        NUM_APICS += 1;
                     }
                 },
                 9 => {
@@ -342,17 +357,44 @@ impl ParsedACPI {
 
                     // If the processor is enabled/can be enabled, record it
                     if (flags & PROCESSOR_ENABLED) != 0 || (flags & ONLINE_CAPABLE) != 0 {
-                        if self.num_apics >= MAX_CORES {
+                        if NUM_APICS >= MAX_CORES {
                             return Err(Error::TooManyCores);
                         }
-                        self.apics[self.num_apics] = apic_id as u32;
-                        self.num_apics += 1;
+                        APICS[NUM_APICS] = apic_id as u32;
+                        NUM_APICS += 1;
                     }
                 },
                 _ => {},
             }
             records_ptr += entry_len as u64;
         }
+        Ok(())
+    }
+
+    pub unsafe fn launch_next_ap(&mut self) -> Result<()> {
+        let base = get_apic_base();
+        let regs: &'static mut [u32] = core::slice::from_raw_parts_mut(base as *mut _, 256);
+
+        let mut xapic = xapic::XAPIC::new(regs);
+
+        // If we have not yet initialized all cores startup the next core
+        if CUR_APIC <= NUM_APICS {
+
+            // If this is the BSP, move on to the next processor
+            if xapic.bsp() {
+                CUR_APIC += 1;
+            }
+
+            println!("Launching: {}", APICS[CUR_APIC]);
+
+            xapic.ipi_init(XApic(1));
+            //xapic.ipi_init(XApic(APICS[CUR_APIC] as u8));
+            //xapic.ipi_startup(XApic(APICS[CUR_APIC] as u8), 0);
+            //xapic.ipi_startup(XApic(APICS[CUR_APIC] as u8), 0);
+
+            CUR_APIC += 1;
+        }
+
         Ok(())
     }
 }

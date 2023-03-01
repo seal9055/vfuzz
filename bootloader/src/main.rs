@@ -2,11 +2,15 @@
 #![no_main]
 
 use bootloader::{
-    println, mm, acpi,
+    println, mm, apic,
+    acpi::{
+        self,
+        NUM_APICS,
+        CUR_APIC,
+    },
 };
 
 use core::panic::PanicInfo;
-use core::sync::atomic::{AtomicUsize, Ordering};
 
 #[repr(packed, C)]
 pub struct MemLayout {
@@ -14,47 +18,56 @@ pub struct MemLayout {
     mem_layout: [mm::E820Entry; 32],
 }
 
+//static mut V: [u8; 4096] = [0u8; 4096];
+
 #[no_mangle]
 /// Entry-point of the stage2 bootloader
 pub extern "C" fn entry(arg1: &MemLayout) -> ! {
     println!("Entered rust part of bootloader");
     assert!(arg1.num_entries < 32, "Too many memory regions found");
 
-    for i in 0..arg1.num_entries {
-        let i = i as usize;
-        println!("[{:0>16X}:{:0>16X}] - {}", {arg1.mem_layout[i].base}, 
-                 arg1.mem_layout[i].base + arg1.mem_layout[i].length, {arg1.mem_layout[i].typ}); 
-    }
-
-    static CORE_IDS: AtomicUsize = AtomicUsize::new(0);
-
-    let core_id = CORE_IDS.fetch_add(1, Ordering::SeqCst);
+    //for i in 0..arg1.num_entries {
+    //    let i = i as usize;
+    //    println!("[{:0>16X}:{:0>16X}] - {}", {arg1.mem_layout[i].base}, 
+    //             arg1.mem_layout[i].base + arg1.mem_layout[i].length, {arg1.mem_layout[i].typ}); 
+    //}
 
     // For some reason unwrapping here causes a segfault. Matching like this works though
+    let apic = unsafe { apic::Apic::init() };
+    let _apic = match apic {
+        Ok(v) => v,
+        Err(v) => panic!("{:?}", v),
+    };
+    
+    // For some reason unwrapping here causes a segfault. Matching like this works though
     let acpi = unsafe { acpi::ParsedACPI::parse() };
-    let acpi = match acpi {
+    let mut acpi = match acpi {
         Ok(v) => v,
         Err(v) => panic!("{:?}", v),
     };
 
-    println!("Done parsing acpi({}), found {} cores", acpi.version, acpi.num_apics);
+    //unsafe { println!("Done parsing acpi({}), found {} cores", acpi.version, NUM_APICS); }
+    //unsafe { println!("{}", CUR_APIC); }
+
+    let _ = unsafe { acpi.launch_next_ap() };
+
 
     // If this is the first core booting up
-    if core_id == 0 {
+    //if ApicControl::bsp() {
+    //for i in 0..NUM_APICS {
+    //    // Initialize memory
+    //        // Load memory map
 
-        // Initialize memory
-            // Load memory map
+    //    // Download kernel
 
-        // Download kernel
+    //    // Setup page tables
 
-        // Setup page tables
+    //    // Load the kernel
 
-        // Load the kernel
-
-        // for each core {
-            // allocate stack
-            // 
-    }
+    //    // for each core {
+    //        // allocate stack
+    //        // 
+    //}
 
     // launch kernel[core_id]
 
